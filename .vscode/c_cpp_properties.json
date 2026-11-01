@@ -1,12 +1,20 @@
 {
-    "configurations": [
-        {
-            "name": "STM32",
-            "compileCommands": "${workspaceFolder}/build/Debug/compile_commands.json",
-            "intelliSenseMode": "windows-gcc-arm",
-            "cStandard": "gnu23",
-            "cppStandard": "gnu++20"
-        }
-    ],
-    "version": 4
+    "configurations":  [
+                           {
+                               "name":  "STM32",
+                               "compilerPath":  "${env:LOCALAPPDATA}/stm32cube/bundles/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-gcc.exe",
+                               "compilerArgs":  [
+                                                    "-mcpu=cortex-m3",
+                                                    "-mthumb"
+                                                ],
+                               "compileCommands":  [
+                                                       "${workspaceFolder}/Bluepill_App/build/Debug/compile_commands.json",
+                                                       "${workspaceFolder}/Bluepill_Test/build/Debug/compile_commands.json"
+                                                   ],
+                               "intelliSenseMode":  "windows-gcc-arm",
+                               "cStandard":  "gnu11",
+                               "cppStandard":  "gnu++20"
+                           }
+                       ],
+    "version":  4
 }

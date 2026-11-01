@@ -1,0 +1,12 @@
+build
+mx.scratch
+!.settings
+# Arquivos gerados pela compilação
+**/build/
+
+# Configurações pessoais do CMake
+**/CMakeUserPresets.json
+
+# Temporários e logs
+*.log
+*.tmp

@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "preLaunchTask": "Compilar firmware Debug",
+            "name": "Blue Pill - OpenOCD",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/Debug/Bluepill_Test.elf",
+            "serverpath": "C:/ST/STM32CubeIDE_2.2.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.openocd.win32_2.4.500.202604080855/tools/bin/openocd.exe",
+            "gdbPath": "C:/Users/diogo/AppData/Local/stm32cube/bundles/gnu-gdb-for-stm32/14.3.1+st.2/bin/arm-none-eabi-gdb.exe",
+            "nmPath": "C:/Users/diogo/AppData/Local/stm32cube/bundles/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-nm.exe",
+            "objdumpPath": "C:/Users/diogo/AppData/Local/stm32cube/bundles/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-objdump.exe",
+           "configFiles": [
+                 "interface/stlink-dap.cfg",
+                 "target/stm32f1x.cfg"
+            ],
+            "openOCDLaunchCommands": [
+                "adapter speed 100"
+            ],
+            "runToEntryPoint": "main",
+            "showDevDebugOutput": "raw",
+           "searchDir": [
+    "C:/ST/STM32CubeIDE_2.2.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.debug.openocd_2.3.400.202606220929/resources/openocd/st_scripts"
+]
+        }
+    ]
+}
