@@ -46,7 +46,10 @@ typedef struct
     uint16_t payload_length;
     const uint8_t *payload;
 } Boot_FrameView;
-
+size_t BootProtocol_BuildInfoResponse(
+    const Boot_FrameView *request,
+    uint8_t *output,
+    size_t output_capacity);
 Boot_FrameStatus BootProtocol_ParseFrame(
     const uint8_t *frame,
     size_t frame_size,

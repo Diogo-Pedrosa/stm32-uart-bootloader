@@ -1,7 +1,7 @@
 #include "boot_protocol.h"
 #include "boot_config.h"
 #include "boot_crc.h"
-
+#include "boot_commands.h"
 size_t BootProtocol_BuildFrame(
     uint8_t command,
     uint16_t sequence,
@@ -126,4 +126,69 @@ Boot_FrameStatus BootProtocol_ParseFrame(
     view->payload = &frame[BOOT_PROTOCOL_HEADER_SIZE];
 
     return BOOT_FRAME_OK;
+}
+
+/* Builds a GET_INFO response from a validated request.
+   Returns zero for unsupported or invalid requests.
+   Request payload and output must not overlap. */
+size_t BootProtocol_BuildInfoResponse(
+    const Boot_FrameView *request,
+    uint8_t *output,
+    size_t output_capacity);
+
+    static void BootProtocol_WriteU32LE(
+    uint8_t *output,
+    uint32_t value)
+{
+    output[0] = (uint8_t)(value & 0xFFU);
+    output[1] = (uint8_t)((value >> 8U) & 0xFFU);
+    output[2] = (uint8_t)((value >> 16U) & 0xFFU);
+    output[3] = (uint8_t)(value >> 24U);
+}
+
+size_t BootProtocol_BuildInfoResponse(
+    const Boot_FrameView *request,
+    uint8_t *output,
+    size_t output_capacity)
+{
+    if ((request == NULL) ||
+        (request->command != BOOT_CMD_GET_INFO) ||
+        (request->payload_length != 0U))
+    {
+        return 0U;
+    }
+
+    Boot_Info info = {0};
+
+    Boot_CommandStatus status = BootCommands_Execute(
+        BOOT_CMD_GET_INFO,
+        &info
+    );
+
+    if (status != BOOT_CMD_OK)
+    {
+        return 0U;
+    }
+
+    uint8_t payload[29] = {0};
+
+    /* Wire status: 0 means success. */
+    payload[0] = 0U;
+
+    BootProtocol_WriteU32LE(&payload[1],  info.boot_version_major);
+    BootProtocol_WriteU32LE(&payload[5],  info.boot_version_minor);
+    BootProtocol_WriteU32LE(&payload[9],  info.boot_version_patch);
+    BootProtocol_WriteU32LE(&payload[13], info.protocol_version);
+    BootProtocol_WriteU32LE(&payload[17], info.target_id);
+    BootProtocol_WriteU32LE(&payload[21], info.app_address);
+    BootProtocol_WriteU32LE(&payload[25], info.app_capacity);
+
+    return BootProtocol_BuildFrame(
+        (uint8_t)(request->command | BOOT_PROTOCOL_RESPONSE_FLAG),
+        request->sequence,
+        payload,
+        (uint16_t)sizeof(payload),
+        output,
+        output_capacity
+    );
 }

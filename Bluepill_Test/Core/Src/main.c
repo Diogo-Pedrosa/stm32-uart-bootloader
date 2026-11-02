@@ -60,6 +60,13 @@ volatile Boot_FrameStatus debug_parse_status;
 volatile Boot_FrameStatus debug_corrupt_status;
 volatile Boot_FrameStatus debug_short_status;
 volatile Boot_FrameStatus debug_length_status;
+
+uint8_t debug_response[BOOT_PROTOCOL_MAX_FRAME_SIZE] = {0};
+
+volatile uint32_t debug_response_size = 0U;
+volatile Boot_FrameStatus debug_response_status;
+
+Boot_FrameView debug_response_view = {0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -162,6 +169,29 @@ debug_length_status = BootProtocol_ParseFrame(
 /* Restore the original empty payload length. */
 debug_frame[6] = 0U;
 debug_frame[7] = 0U;
+
+/* Refresh the validated request view. */
+debug_parse_status = BootProtocol_ParseFrame(
+    debug_frame,
+    debug_frame_size,
+    &debug_frame_view
+);
+
+if (debug_parse_status == BOOT_FRAME_OK)
+{
+    debug_response_size =
+        (uint32_t)BootProtocol_BuildInfoResponse(
+            &debug_frame_view,
+            debug_response,
+            sizeof(debug_response)
+        );
+
+    debug_response_status = BootProtocol_ParseFrame(
+        debug_response,
+        debug_response_size,
+        &debug_response_view
+    );
+}
 debug_crc_empty = BootCRC_Calculate(crc_test_data, 0U);
 if ((boot_stay == 0U) && (app_vectors_ok == 1U))
 {
