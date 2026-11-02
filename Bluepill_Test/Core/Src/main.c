@@ -19,11 +19,12 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "gpio.h"
-
+#include "boot_protocol.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "bootloader.h"
 #include "boot_commands.h"
+#include "boot_crc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,6 +50,16 @@ volatile uint32_t boot_stay = 0;
 volatile Boot_Info boot_info = {0};
 volatile uint32_t debug_command = 0U;
 volatile Boot_CommandStatus debug_status = BOOT_CMD_OK;
+volatile uint32_t debug_crc = 0U;
+volatile uint32_t debug_crc_empty = 0U;
+uint8_t debug_frame[BOOT_PROTOCOL_MAX_FRAME_SIZE] = {0};
+volatile uint32_t debug_frame_size = 0U;
+Boot_FrameView debug_frame_view = {0};
+
+volatile Boot_FrameStatus debug_parse_status;
+volatile Boot_FrameStatus debug_corrupt_status;
+volatile Boot_FrameStatus debug_short_status;
+volatile Boot_FrameStatus debug_length_status;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -96,11 +107,68 @@ int main(void)
 /* USER CODE BEGIN 2 */
 BootCommands_GetInfo(&boot_info);
 app_vectors_ok = Bootloader_CheckApplicationVectors();
+static const uint8_t crc_test_data[] = "123456789";
 
+debug_crc = BootCRC_Calculate(
+    crc_test_data,
+    sizeof(crc_test_data) - 1U
+);
+debug_frame_size = (uint32_t)BootProtocol_BuildFrame(
+    BOOT_CMD_GET_INFO,
+    1U,
+    NULL,
+    0U,
+    debug_frame,
+    sizeof(debug_frame)
+);
+debug_parse_status = BootProtocol_ParseFrame(
+    debug_frame,
+    debug_frame_size,
+    &debug_frame_view
+);
+
+/* Change one sequence bit without updating the CRC. */
+debug_frame[4] ^= 0x01U;
+
+Boot_FrameView corrupt_view = {0};
+
+debug_corrupt_status = BootProtocol_ParseFrame(
+    debug_frame,
+    debug_frame_size,
+    &corrupt_view
+);
+
+/* Restore the original frame. */
+debug_frame[4] ^= 0x01U;
+Boot_FrameView invalid_view = {0};
+
+/* A frame shorter than the minimum must be rejected. */
+debug_short_status = BootProtocol_ParseFrame(
+    debug_frame,
+    BOOT_PROTOCOL_MIN_FRAME_SIZE - 1U,
+    &invalid_view
+);
+
+/* Declare 257 payload bytes, exceeding the 256-byte limit. */
+debug_frame[6] = 0x01U;
+debug_frame[7] = 0x01U;
+
+debug_length_status = BootProtocol_ParseFrame(
+    debug_frame,
+    debug_frame_size,
+    &invalid_view
+);
+
+/* Restore the original empty payload length. */
+debug_frame[6] = 0U;
+debug_frame[7] = 0U;
+debug_crc_empty = BootCRC_Calculate(crc_test_data, 0U);
 if ((boot_stay == 0U) && (app_vectors_ok == 1U))
 {
     Bootloader_TryStartApplication();
 }
+
+
 /* USER CODE END 2 */
   /* USER CODE BEGIN WHILE */
   while (1)
