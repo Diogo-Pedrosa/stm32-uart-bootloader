@@ -25,6 +25,7 @@
 #include "bootloader.h"
 #include "boot_commands.h"
 #include "boot_crc.h"
+#include "boot_receiver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -67,6 +68,16 @@ volatile uint32_t debug_response_size = 0U;
 volatile Boot_FrameStatus debug_response_status;
 
 Boot_FrameView debug_response_view = {0};
+
+Boot_Receiver debug_receiver;
+Boot_FrameView debug_received_view = {0};
+
+volatile Boot_RxResult debug_rx_result;
+volatile uint32_t debug_ready_count = 0U;
+volatile uint32_t debug_rejected_count = 0U;
+volatile uint32_t debug_stream_ready = 0U;
+volatile uint32_t debug_stream_rejected = 0U;
+volatile Boot_FrameStatus debug_stream_error = BOOT_FRAME_OK;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -193,6 +204,76 @@ if (debug_parse_status == BOOT_FRAME_OK)
     );
 }
 debug_crc_empty = BootCRC_Calculate(crc_test_data, 0U);
+
+BootReceiver_Init(&debug_receiver);
+
+debug_ready_count = 0U;
+debug_rejected_count = 0U;
+
+/* Noise before the packet must be ignored. */
+BootReceiver_PushByte(
+    &debug_receiver, 0x12U, &debug_received_view);
+
+BootReceiver_PushByte(
+    &debug_receiver, 0x34U, &debug_received_view);
+
+/* Feed the valid GET_INFO frame one byte at a time. */
+for (size_t i = 0U; i < debug_frame_size; i++)
+{
+    debug_rx_result = BootReceiver_PushByte(
+        &debug_receiver,
+        debug_frame[i],
+        &debug_received_view
+    );
+
+    if (debug_rx_result == BOOT_RX_FRAME_READY)
+    {
+        debug_ready_count++;
+    }
+    else if (debug_rx_result == BOOT_RX_FRAME_REJECTED)
+    {
+        debug_rejected_count++;
+    }
+}
+
+BootReceiver_Init(&debug_receiver);
+
+debug_stream_ready = 0U;
+debug_stream_rejected = 0U;
+debug_stream_error = BOOT_FRAME_OK;
+
+/* Send one corrupted frame followed by two valid frames. */
+for (uint32_t packet = 0U; packet < 3U; packet++)
+{
+    for (size_t i = 0U; i < debug_frame_size; i++)
+    {
+        uint8_t byte = debug_frame[i];
+
+        /* Corrupt one sequence byte in the first packet only. */
+        if ((packet == 0U) && (i == 4U))
+        {
+            byte ^= 0x01U;
+        }
+
+        debug_rx_result = BootReceiver_PushByte(
+            &debug_receiver,
+            byte,
+            &debug_received_view
+        );
+
+        if (debug_rx_result == BOOT_RX_FRAME_READY)
+        {
+            debug_stream_ready++;
+
+            /* Process the view before receiving more bytes. */
+        }
+        else if (debug_rx_result == BOOT_RX_FRAME_REJECTED)
+        {
+            debug_stream_rejected++;
+            debug_stream_error = debug_receiver.last_status;
+        }
+    }
+}
 if ((boot_stay == 0U) && (app_vectors_ok == 1U))
 {
     Bootloader_TryStartApplication();

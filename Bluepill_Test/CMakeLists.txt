@@ -48,6 +48,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Bootloader/Port/boot_port_stm32f1.c
     Bootloader/Src/boot_crc.c
     Bootloader/Src/boot_protocol.c
+    Bootloader/Src/boot_receiver.c
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
