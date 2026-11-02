@@ -51,6 +51,8 @@ volatile uint32_t teste = 0;
 volatile uint32_t app_stack = 0;
 volatile uint32_t app_reset = 0;
 volatile uint32_t app_vectors_ok = 0;
+volatile uint32_t boot_stay = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -177,7 +179,8 @@ app_vectors_ok = Boot_CheckApplicationVectors();
 /* USER CODE BEGIN 2 */
 app_vectors_ok = Boot_CheckApplicationVectors();
 
-if (app_vectors_ok == 1U)
+
+if ((boot_stay == 0U) && (app_vectors_ok == 1U))
 {
     Boot_JumpToApplication();
 }
