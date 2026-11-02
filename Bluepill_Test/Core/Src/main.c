@@ -22,7 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "bootloader.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -32,11 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define APP_ADDRESS       0x08004000U
-#define FLASH_END_ADDRESS 0x08010000U
 
-#define RAM_START_ADDRESS 0x20000000U
-#define RAM_END_ADDRESS   0x20005000U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,9 +44,6 @@
 
 /* USER CODE BEGIN PV */
 volatile uint32_t teste = 0;
-volatile uint32_t app_stack = 0;
-volatile uint32_t app_reset = 0;
-volatile uint32_t app_vectors_ok = 0;
 volatile uint32_t boot_stay = 0;
 
 /* USER CODE END PV */
@@ -63,85 +56,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static uint32_t Boot_CheckApplicationVectors(void)
-{
-    app_stack = *(volatile const uint32_t *)APP_ADDRESS;
-    app_reset = *(volatile const uint32_t *)(APP_ADDRESS + 4U);
 
-    /* A pilha deve estar dentro da RAM e alinhada em 8 bytes.
-       O limite superior é permitido para a pilha inicial. */
-    if ((app_stack <= RAM_START_ADDRESS) ||
-        (app_stack > RAM_END_ADDRESS) ||
-        ((app_stack & 0x7U) != 0U))
-    {
-        return 0U;
-    }
-
-    /* O bit 0 deve indicar execução Thumb. */
-    if ((app_reset & 1U) == 0U)
-    {
-        return 0U;
-    }
-
-    uint32_t reset_address = app_reset & ~1U;
-
-    if ((reset_address < APP_ADDRESS) ||
-        (reset_address >= FLASH_END_ADDRESS))
-    {
-        return 0U;
-    }
-
-    return 1U;
-}/* Esta função usa somente Assembly para não acessar
-   a pilha antiga depois de trocar o MSP. */
-__attribute__((naked, noreturn))
-static void Boot_EnterApplication(void)
-{
-    __asm volatile(
-        "ldr r0, =0x08004000 \n"
-        "ldr r1, [r0, #4]   \n"
-        "ldr r0, [r0]       \n"
-        "msr msp, r0        \n"
-        "cpsie i            \n"
-        "bx r1              \n"
-    );
-}
-
-static void Boot_JumpToApplication(void)
-{
-    /* Esta versão parte do main, sem RTOS e usando MSP. */
-
-    /* Desfaz a configuração de clock e da HAL. */
-    HAL_RCC_DeInit();
-    HAL_DeInit();
-
-    __disable_irq();
-
-    /* Para o SysTick do bootloader. */
-    SysTick->CTRL = 0U;
-    SysTick->LOAD = 0U;
-    SysTick->VAL = 0U;
-
-    /* Desabilita e limpa interrupções externas do STM32F103.
-       Dois grupos cobrem até 64 interrupções. */
-    for (uint32_t i = 0U; i < 2U; i++)
-    {
-        NVIC->ICER[i] = 0xFFFFFFFFU;
-        NVIC->ICPR[i] = 0xFFFFFFFFU;
-    }
-
-    /* Limpa as pendências de SysTick e PendSV. */
-    SCB->ICSR = SCB_ICSR_PENDSTCLR_Msk |
-                SCB_ICSR_PENDSVCLR_Msk;
-
-    /* Seleciona a tabela de vetores da aplicação. */
-    SCB->VTOR = APP_ADDRESS;
-
-    __DSB();
-    __ISB();
-
-    Boot_EnterApplication();
-}
 /* USER CODE END 0 */
 
 /**
@@ -173,21 +88,16 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  /* USER CODE BEGIN 2 */
-/* USER CODE BEGIN 2 */
-app_vectors_ok = Boot_CheckApplicationVectors();
-/* USER CODE BEGIN 2 */
-app_vectors_ok = Boot_CheckApplicationVectors();
 
+
+/* USER CODE BEGIN 2 */
+app_vectors_ok = Bootloader_CheckApplicationVectors();
 
 if ((boot_stay == 0U) && (app_vectors_ok == 1U))
 {
-    Boot_JumpToApplication();
+    Bootloader_TryStartApplication();
 }
 /* USER CODE END 2 */
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
