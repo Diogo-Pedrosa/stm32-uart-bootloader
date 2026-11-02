@@ -7,4 +7,13 @@
 #define BOOT_RAM_START_ADDRESS 0x20000000U
 #define BOOT_RAM_END_ADDRESS   0x20005000U
 
+#define BOOT_VERSION_MAJOR    0U
+#define BOOT_VERSION_MINOR    1U
+#define BOOT_VERSION_PATCH    0U
+
+#define BOOT_PROTOCOL_VERSION 1U
+
+/* Project-defined identifier for the STM32F103 64 KB target. */
+#define BOOT_TARGET_ID        0x00000101U
+
 #endif

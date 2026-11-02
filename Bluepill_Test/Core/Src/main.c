@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "bootloader.h"
+#include "boot_commands.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,7 +46,9 @@
 /* USER CODE BEGIN PV */
 volatile uint32_t teste = 0;
 volatile uint32_t boot_stay = 0;
-
+volatile Boot_Info boot_info = {0};
+volatile uint32_t debug_command = 0U;
+volatile Boot_CommandStatus debug_status = BOOT_CMD_OK;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -91,6 +94,7 @@ int main(void)
 
 
 /* USER CODE BEGIN 2 */
+BootCommands_GetInfo(&boot_info);
 app_vectors_ok = Bootloader_CheckApplicationVectors();
 
 if ((boot_stay == 0U) && (app_vectors_ok == 1U))
@@ -104,8 +108,16 @@ if ((boot_stay == 0U) && (app_vectors_ok == 1U))
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    teste++;
-    HAL_Delay(1000);
+    if (debug_command != 0U)
+{
+    uint32_t command = debug_command;
+    debug_command = 0U;
+
+    debug_status = BootCommands_Execute(command, &boot_info);
+}
+
+teste++;
+HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }

@@ -44,6 +44,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Bootloader/Src/bootloader.c
+    Bootloader/Src/boot_commands.c
     Bootloader/Port/boot_port_stm32f1.c
 )
 
