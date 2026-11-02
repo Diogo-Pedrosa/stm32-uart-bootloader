@@ -24,7 +24,11 @@
             "showDevDebugOutput": "raw",
            "searchDir": [
     "C:/ST/STM32CubeIDE_2.2.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.debug.openocd_2.3.400.202606220929/resources/openocd/st_scripts"
-]
+],
+"liveWatch": {
+    "enabled": true,
+    "samplesPerSecond": 4
+}
         }
     ]
 }

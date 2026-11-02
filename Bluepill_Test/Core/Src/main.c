@@ -90,6 +90,55 @@ static uint32_t Boot_CheckApplicationVectors(void)
     }
 
     return 1U;
+}/* Esta função usa somente Assembly para não acessar
+   a pilha antiga depois de trocar o MSP. */
+__attribute__((naked, noreturn))
+static void Boot_EnterApplication(void)
+{
+    __asm volatile(
+        "ldr r0, =0x08004000 \n"
+        "ldr r1, [r0, #4]   \n"
+        "ldr r0, [r0]       \n"
+        "msr msp, r0        \n"
+        "cpsie i            \n"
+        "bx r1              \n"
+    );
+}
+
+static void Boot_JumpToApplication(void)
+{
+    /* Esta versão parte do main, sem RTOS e usando MSP. */
+
+    /* Desfaz a configuração de clock e da HAL. */
+    HAL_RCC_DeInit();
+    HAL_DeInit();
+
+    __disable_irq();
+
+    /* Para o SysTick do bootloader. */
+    SysTick->CTRL = 0U;
+    SysTick->LOAD = 0U;
+    SysTick->VAL = 0U;
+
+    /* Desabilita e limpa interrupções externas do STM32F103.
+       Dois grupos cobrem até 64 interrupções. */
+    for (uint32_t i = 0U; i < 2U; i++)
+    {
+        NVIC->ICER[i] = 0xFFFFFFFFU;
+        NVIC->ICPR[i] = 0xFFFFFFFFU;
+    }
+
+    /* Limpa as pendências de SysTick e PendSV. */
+    SCB->ICSR = SCB_ICSR_PENDSTCLR_Msk |
+                SCB_ICSR_PENDSVCLR_Msk;
+
+    /* Seleciona a tabela de vetores da aplicação. */
+    SCB->VTOR = APP_ADDRESS;
+
+    __DSB();
+    __ISB();
+
+    Boot_EnterApplication();
 }
 /* USER CODE END 0 */
 
@@ -125,6 +174,13 @@ int main(void)
   /* USER CODE BEGIN 2 */
 /* USER CODE BEGIN 2 */
 app_vectors_ok = Boot_CheckApplicationVectors();
+/* USER CODE BEGIN 2 */
+app_vectors_ok = Boot_CheckApplicationVectors();
+
+if (app_vectors_ok == 1U)
+{
+    Boot_JumpToApplication();
+}
 /* USER CODE END 2 */
   /* USER CODE END 2 */
 
